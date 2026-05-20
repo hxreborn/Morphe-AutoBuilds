@@ -39,7 +39,80 @@ def get_build_number_for_version(version: str, config: dict) -> tuple[str | None
         logging.debug(f"Could not fetch build number: {e}")
     return None, None
 
-def get_download_link(version: str, app_name: str, config: dict, arch: str = None) -> str: 
+def find_release_page_from_main(version: str, config: dict, build_number: str = None, build_format: str = None) -> str | None:
+    """Scrape the main app listing page on APKMirror to find the correct release page URL
+    for a specific version. This avoids URL construction from config fields, which may not
+    match APKMirror's actual URL slugs (e.g., 'duolingo' vs 'duolingo-language-lessons').
+    
+    Returns the full release page URL if found, or None if scraping fails."""
+    try:
+        main_url = f"{base_url}/apk/{config['org']}/{config['name']}/"
+        response = session.get(main_url)
+        if response.status_code != 200:
+            logging.debug(f"Main page not accessible for scraping: {main_url} (status {response.status_code})")
+            return None
+        
+        soup = BeautifulSoup(response.content, "html.parser")
+        version_parts = version.split('.')
+        
+        # Try full version first, then progressively strip parts (e.g., 6.77.5 -> 6.77 -> 6)
+        for i in range(len(version_parts), 0, -1):
+            current_ver = ".".join(version_parts[:i])
+            current_ver_dash = "-".join(version_parts[:i])
+            
+            # Build search patterns for matching
+            search_patterns = [current_ver, current_ver_dash]
+            if build_number and i == len(version_parts):
+                if build_format == 'build_suffix':
+                    search_patterns.append(f"{current_ver} build {build_number}")
+                else:
+                    search_patterns.append(f"{current_ver}({build_number})")
+            
+            # Search all links on the main page
+            for link in soup.find_all('a', href=True):
+                href = link['href']
+                text = link.get_text().strip()
+                
+                # Only consider links that go to release pages under this app
+                # APKMirror release URLs look like: /apk/{org}/{app-slug}/{release-slug}-{version}-release/
+                if not href.startswith(f"/apk/{config['org']}/"):
+                    continue
+                
+                # Check if this link is for our version
+                for pattern in search_patterns:
+                    if pattern and pattern in href:
+                        # Verify this looks like a release page (contains the dashed version)
+                        if current_ver_dash in href:
+                            full_url = base_url + href
+                            logging.info(f"✓ Found release page from main listing: {full_url}")
+                            return full_url
+                    if pattern and pattern in text:
+                        if current_ver_dash in href:
+                            full_url = base_url + href
+                            logging.info(f"✓ Found release page from main listing (text match): {full_url}")
+                            return full_url
+            
+            # Also check headings (h5, h4, h3) which often contain version links
+            for heading in soup.find_all(['h5', 'h4', 'h3', 'h2']):
+                link = heading.find('a', href=True)
+                if link:
+                    href = link['href']
+                    text = link.get_text().strip()
+                    for pattern in search_patterns:
+                        if pattern and (pattern in href or pattern in text):
+                            if current_ver_dash in href:
+                                full_url = base_url + href
+                                logging.info(f"✓ Found release page from heading: {full_url}")
+                                return full_url
+        
+        logging.debug(f"Could not find release page URL from main listing for version {version}")
+        return None
+        
+    except Exception as e:
+        logging.debug(f"Error scraping main page for release URL: {e}")
+        return None
+
+def get_download_link(version: str, app_name: str, config: dict, arch: str = None) -> str:
     if not version:
         logging.error(f"No version provided for {app_name}")
         return None
@@ -75,6 +148,33 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
     version_parts = version.split('.')
     found_soup = None
     correct_version_page = False
+    
+    # --- PRIMARY APPROACH: Scrape the main app page for the correct release URL ---
+    # This is more reliable than constructing URLs from config fields, because
+    # APKMirror's actual URL slugs often differ from config values
+    # (e.g., 'duolingo' slug vs 'duolingo-language-lessons' actual release name)
+    scraped_url = find_release_page_from_main(version, config, build_number, build_format)
+    if scraped_url:
+        logging.info(f"Trying scraped release URL: {scraped_url}")
+        try:
+            response = session.get(scraped_url)
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.content, "html.parser")
+                page_text = soup.get_text()
+                # Quick validation: check version appears on page
+                if version in page_text or version.replace('.', '-') in page_text:
+                    logging.info(f"✓ Scraped release page validated: {response.url}")
+                    found_soup = soup
+                    correct_version_page = True
+                else:
+                    logging.warning(f"Scraped URL returned page but version {version} not found in content")
+        except Exception as e:
+            logging.warning(f"Error fetching scraped URL: {e}")
+    
+    # --- FALLBACK: Construct URLs from config fields ---
+    # Only used if scraping the main page didn't work
+    if not correct_version_page:
+        logging.info("Scraping didn't find the page, falling back to URL construction...")
     
     # Use release_prefix if available, otherwise use app name
     release_name = config.get('release_prefix', config['name'])
