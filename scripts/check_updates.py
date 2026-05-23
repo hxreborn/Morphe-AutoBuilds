@@ -9,10 +9,6 @@ from datetime import datetime
 # Always trigger build - we'll rely on schedule and manual triggers
 print("Triggering build...")
 
-# Set GitHub Actions output
-with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
-    f.write('has_updates=true\n')
-
 def get_apkmirror_version(package_name):
     """
     Get latest version from APKMirror using curl (no Python dependencies)
@@ -155,6 +151,13 @@ def main():
             subprocess.run(['git', 'config', '--global', 'user.email', 'actions@github.com'], check=True)
             subprocess.run(['git', 'add', 'apps/'], check=True)
             subprocess.run(['git', 'commit', '-m', 'chore: update app versions [skip ci]'], check=True)
+            token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+            repo_slug = os.environ.get("GITHUB_REPOSITORY")
+            if token and repo_slug:
+                remote = f"https://x-access-token:{token}@github.com/{repo_slug}.git"
+                subprocess.run(['git', 'remote', 'set-url', '--push', 'origin', remote], check=True)
+            else:
+                print("Skipping authenticated remote setup; git push may require manual credentials")
             subprocess.run(['git', 'push'], check=True)
         except Exception as e:
             print(f"Error committing changes: {e}")
