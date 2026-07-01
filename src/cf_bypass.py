@@ -72,6 +72,22 @@ async def _solve_challenge_async(url: str, timeout: int = 30) -> dict:
     and return a dict of cookies for the apkmirror.com domain."""
     import nodriver as uc  # imported lazily so the dep is optional
 
+    # Monkeypatch HTTPApi.get to handle slow startup environments (CI runners)
+    orig_get = uc.core.browser.HTTPApi.get
+
+    async def patched_get(self, endpoint: str):
+        if endpoint == "version":
+            for attempt in range(60):
+                try:
+                    return await orig_get(self, endpoint)
+                except Exception:
+                    if attempt == 59:
+                        raise
+                    await asyncio.sleep(0.5)
+        return await orig_get(self, endpoint)
+
+    uc.core.browser.HTTPApi.get = patched_get
+
     cookies: dict = {}
     browser = None
     try:
