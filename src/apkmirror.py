@@ -486,6 +486,20 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
         soup = BeautifulSoup(response.content, "html.parser")
 
         sub_url = soup.find('a', class_='downloadButton')
+
+        # Some apps organize by variant-then-version (e.g. trakt/showly): the variant link
+        # lands on a version-listing page that has no downloadButton, only per-version
+        # downloadLink entries. Follow the newest one to reach the actual release page.
+        if not sub_url:
+            listing_link = soup.find('a', class_='downloadLink')
+            if listing_link:
+                release_page_url = base_url + listing_link['href']
+                response = _cf_get(release_page_url)
+                response.raise_for_status()
+                logging.info(f"URL:{response.url} [{len(response.content)}] -> Release Page (via listing)")
+                soup = BeautifulSoup(response.content, "html.parser")
+                sub_url = soup.find('a', class_='downloadButton')
+
         if sub_url:
             final_download_page_url = base_url + sub_url['href']
             response = _cf_get(final_download_page_url)
