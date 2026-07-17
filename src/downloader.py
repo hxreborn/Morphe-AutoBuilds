@@ -65,9 +65,10 @@ def download_required(source: str) -> tuple[list[Path], str]:
                 continue
 
             # Keep the existing Morphe-specific asset filtering.
+            # The CLI jar is morphe-cli-* up to v1.10.0 and morphe-desktop-* after.
             if "morphe-patches" in entry_name or "morphe-cli" in entry_name:
                 if asset_name.endswith(".mpp") or (
-                    "morphe-cli" in asset_name and asset_name.endswith(".jar")
+                    "morphe" in asset_name and asset_name.endswith(".jar")
                 ):
                     downloaded_files.append(download_resource(asset_url))
             else:
