@@ -77,6 +77,27 @@ def extract_version_from_filename(apk_name: str) -> str:
     return matches[-1].group(1).strip()
 
 
+def extract_patch_version(mpp_name: str) -> str:
+    """Patch bundles are named ``patches-<version>.mpp`` (e.g. ``patches-1.0.1.mpp``,
+    ``patches-1.0.0-dev.4.mpp``). Return the trailing dotted version token, or ''."""
+    stem = mpp_name[:-4] if mpp_name.lower().endswith(".mpp") else mpp_name
+    m = re.search(r"(\d+\.\d[\w.\-]*)$", stem)
+    return m.group(1) if m else ""
+
+
+def detect_patch_version() -> str:
+    """The .mpp bundle used for this build is still in cwd (run_build never
+    deletes it). PATCH_VERSION env overrides for manual/test runs."""
+    override = os.environ.get("PATCH_VERSION", "").strip()
+    if override:
+        return override
+    for mpp in sorted(Path(".").glob("*.mpp")):
+        v = extract_patch_version(mpp.name)
+        if v:
+            return v
+    return ""
+
+
 def main() -> int:
     app = os.environ.get("APP_NAME", "").strip()
     src = os.environ.get("SOURCE", "").strip()
@@ -104,6 +125,7 @@ def main() -> int:
         "key": f"{app}|{src}|{arch}",
         "apk": apk_name,
         "resolved_version": resolved_version,
+        "patch_version": detect_patch_version(),
         "app_name": app,
         "source": src,
         "arch": arch,

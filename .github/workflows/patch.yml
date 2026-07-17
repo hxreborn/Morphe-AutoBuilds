@@ -315,13 +315,9 @@ jobs:
       - name: Generate Release Notes
         if: steps.check-apks.outputs.skip_release == 'false'
         run: |
-          cat > release_notes.md << 'EOF'
-          Stock APKs patched with the latest Morphe bundles. Rebuilt daily at 06:00 UTC.
-
-          `universal` builds run on any ARM device, `arm64-v8a` only on 64-bit ones.
-
-          Built automatically. Use at your own risk.
-          EOF
+          python scripts/release_notes.py
+          echo "--- release_notes.md ---"
+          cat release_notes.md
       
       - name: Upload Or Create Release
         if: steps.check-apks.outputs.skip_release == 'false'

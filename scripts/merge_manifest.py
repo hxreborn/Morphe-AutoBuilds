@@ -42,6 +42,7 @@ def main() -> int:
             # when a newer app version becomes available, even for apps whose
             # config 'version' is empty (meaning "latest at build time").
             resolved_version = (rec.get("resolved_version") or "").strip()
+            patch_version = (rec.get("patch_version") or "").strip()
             if not key:
                 continue
             entry = entries.get(key)
@@ -55,12 +56,15 @@ def main() -> int:
                     "source_sig": "",
                     "apk": "",
                     "built_version": "",
+                    "patch_version": "",
                 }
                 entries[key] = entry
             if apk:
                 entry["apk"] = apk
             if resolved_version:
                 entry["built_version"] = resolved_version
+            if patch_version:
+                entry["patch_version"] = patch_version
             # Promote pending_source_sig -> source_sig now that the build
             # succeeded.  The planner deliberately keeps the OLD source_sig
             # for rebuild entries so that a failed build doesn't "consume"
