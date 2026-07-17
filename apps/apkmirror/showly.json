@@ -1,0 +1,9 @@
+{
+    "org": "trakt",
+    "name": "showly",
+    "type": "",
+    "arch": "universal",
+    "dpi": "nodpi",
+    "package": "com.michaldrabik.showly2",
+    "version": ""
+}
