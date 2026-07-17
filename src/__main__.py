@@ -8,7 +8,6 @@ import subprocess
 from src import (
     r2,
     utils,
-    release,
     downloader
 )
 
