@@ -1,6 +1,6 @@
 # Morphe AutoBuilds
 
-Fork of [RookieEnough/Morphe-AutoBuilds](https://github.com/RookieEnough/Morphe-AutoBuilds), trimmed to the apps I use. A GitHub Actions pipeline downloads stock APKs, applies [Morphe](https://github.com/MorpheApp) patch bundles, and publishes signed APKs to a single rolling release. Builds run daily at 06:00 UTC.
+Fork of [RookieEnough/Morphe-AutoBuilds](https://github.com/RookieEnough/Morphe-AutoBuilds) for personal use. A GitHub Actions pipeline downloads stock APKs, applies my own [patch bundles](https://github.com/hxreborn/morphe-patches) using [Morphe](https://github.com/MorpheApp), and publishes signed APKs to a single rolling release. Builds run daily at 06:00 UTC.
 
 [Download the latest release](https://github.com/hxreborn/Morphe-AutoBuilds/releases/latest)
 
