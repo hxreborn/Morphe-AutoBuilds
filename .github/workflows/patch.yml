@@ -314,62 +314,13 @@ jobs:
       
       - name: Generate Release Notes
         if: steps.check-apks.outputs.skip_release == 'false'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "📝 Generating release notes..."
-
-          if [ "${{ steps.check-release.outputs.release_exists }}" = "true" ]; then
-            gh release view latest --json assets --jq '.assets[].name' > current_assets.txt
-          else
-            : > current_assets.txt
-          fi
-
-          for apk in ./release-apks/*.apk; do
-            [ -f "$apk" ] || continue
-            basename "$apk" >> current_assets.txt
-          done
-
-          if [ -f ./release-apks/manifest.json ]; then
-            echo "manifest.json" >> current_assets.txt
-          fi
-
-          sort -u current_assets.txt > release_assets.txt
-
           cat > release_notes.md << 'EOF'
-          # Morphe APKs - Auto Built
-          
-          ## 📱 Available Apps
-          
-          EOF
+          Stock APKs patched with the latest Morphe bundles. Rebuilt daily at 06:00 UTC.
 
-          while read -r filename; do
-            [ -n "$filename" ] || continue
-            echo "- $filename" >> release_notes.md
-          done < release_assets.txt
+          `universal` builds run on any ARM device, `arm64-v8a` only on 64-bit ones.
 
-          cat >> release_notes.md << 'EOF'
-          ---
-          
-          ## ⚙️ Build Information
-          - **Auto-built daily at 6 AM UTC**
-          - **Multiple architecture support** (arm64-v8a, armeabi-v7a, universal)
-          - **Latest Morphe patches**
-          - **Updated automatically**
-          
-          ## 📊 Architecture Guide
-          - **arm64-v8a**: Modern ARM devices (2014+)
-          - **armeabi-v7a**: Older ARM devices
-          - **universal**: All ARM devices (larger file)
-          
-          ## ⚠️ Disclaimer
-          These APKs are built automatically. Use at your own risk.
-          
-          ## 🔄 Update Schedule
-          - Automatic updates daily at 6 AM UTC
-          - Manual updates available via workflow dispatch
-          - Creates `latest` if missing and uploads rebuilt assets in place
+          Built automatically. Use at your own risk.
           EOF
       
       - name: Upload Or Create Release
