@@ -1,0 +1,34 @@
+name: Sync Upstream
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Open PR if upstream has new commits
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git remote add upstream https://github.com/RookieEnough/Morphe-AutoBuilds.git
+          git fetch upstream main
+          new=$(git rev-list --count HEAD..upstream/main)
+          if [ "$new" -eq 0 ]; then
+            echo "Up to date with upstream"
+            exit 0
+          fi
+          git push -f origin upstream/main:refs/heads/upstream-sync
+          gh pr create --base main --head upstream-sync \
+            --title "chore: sync upstream ($new new commits)" \
+            --body "$(git log --oneline HEAD..upstream/main | head -30)" \
+            || echo "PR already open, branch updated"
