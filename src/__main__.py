@@ -129,6 +129,7 @@ def run_build(app_name: str, source: str, arch: str = "universal") -> str:
 
     exclude_patches = []
     include_patches = []
+    extra_flags = []
 
     patches_path = Path("patches") / f"{app_name}-{source}.txt"
     if patches_path.exists():
@@ -139,6 +140,8 @@ def run_build(app_name: str, source: str, arch: str = "universal") -> str:
                     exclude_patches.extend(["-d", line[1:].strip()])
                 elif line.startswith('+'):
                     include_patches.extend(["-e", line[1:].strip()])
+                elif line.startswith('!'):
+                    extra_flags.append(line[1:].strip())
 
     for attempt_idx, ver in enumerate(versions_to_try):
         if attempt_idx > 0:
@@ -246,7 +249,7 @@ def run_build(app_name: str, source: str, arch: str = "universal") -> str:
                         "java", "-jar", str(cli),
                         "patch", "--patches", str(patches),
                         "--out", str(output_apk), str(input_apk),
-                        *exclude_patches, *include_patches
+                        *exclude_patches, *include_patches, *extra_flags
                     ]
                     utils.run_process(morphe_cmd, capture=True, stream=True)
                 except subprocess.CalledProcessError as e:
@@ -280,14 +283,14 @@ def run_build(app_name: str, source: str, arch: str = "universal") -> str:
                         "java", "-jar", str(cli),
                         "patch", "-p", str(patches), "-b",
                         "--out", str(output_apk), str(input_apk),
-                        *exclude_patches, *include_patches
+                        *exclude_patches, *include_patches, *extra_flags
                     ], capture=True, stream=True)
                 else:
                     utils.run_process([
                         "java", "-jar", str(cli),
                         "patch", "--patches", str(patches),
                         "--out", str(output_apk), str(input_apk),
-                        *exclude_patches, *include_patches
+                        *exclude_patches, *include_patches, *extra_flags
                     ], capture=True, stream=True)
 
         except subprocess.CalledProcessError as e:
