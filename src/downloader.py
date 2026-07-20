@@ -1,4 +1,5 @@
 import json
+import hashlib
 import logging
 import time
 from pathlib import Path
@@ -11,6 +12,13 @@ from src import (
     apkmirror,
     github
 )
+
+def _sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 def download_resource(url: str, name: str = None) -> Path:
     res = session.get(url, stream=True)
@@ -174,6 +182,15 @@ def download_platform(
                 continue
             try:
                 filepath = download_resource(download_link)
+                expected_sha = (config.get("sha256") or "").strip().lower()
+                if expected_sha:
+                    actual_sha = _sha256(filepath)
+                    if actual_sha != expected_sha:
+                        filepath.unlink(missing_ok=True)
+                        raise ValueError(
+                            f"SHA256 mismatch for {app_name} v{version}: "
+                            f"expected {expected_sha}, got {actual_sha}"
+                        )
                 return filepath, version, candidates
             except Exception as e:
                 last_error = e
