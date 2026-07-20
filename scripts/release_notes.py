@@ -16,6 +16,34 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from record_build import extract_version_from_filename, detect_arch_from_filename
 
 
+_author_cache: dict[str, str] = {}
+
+
+def author_of_source(source: str) -> str:
+    """Bundle repo owner for a source: the non-MorpheApp github user, or the
+    gitlab project owner. '' if unknown. The MorpheApp/morphe-cli entry is the
+    shared CLI, not the patch author, so it's skipped."""
+    if not source:
+        return ""
+    if source in _author_cache:
+        return _author_cache[source]
+    author = ""
+    try:
+        data = json.loads((Path("sources") / f"{source}.json").read_text(encoding="utf-8"))
+        for el in data[1:] if isinstance(data, list) else []:
+            if el.get("provider") == "gitlab" and el.get("project"):
+                author = el["project"].split("/")[0]
+                break
+            user = el.get("user", "")
+            if user and user.lower() != "morpheapp":
+                author = user
+                break
+    except Exception:
+        author = ""
+    _author_cache[source] = author
+    return author
+
+
 def app_from_filename(apk_name: str, arch: str) -> str:
     """App token is everything before the '-{arch}-' marker in the filename."""
     stem = apk_name[:-4] if apk_name.lower().endswith(".apk") else apk_name
@@ -38,15 +66,16 @@ def parse_apk(apk_name: str) -> dict:
     }
 
 
-def collect_updated(apk_dir: Path, patch_by_app: dict) -> list[dict]:
-    """One row per app, arches merged: {app, version, arches[], patch}."""
+def collect_updated(apk_dir: Path, patch_by_app: dict, author_by_app: dict) -> list[dict]:
+    """One row per app, arches merged: {app, version, arches[], patch, author}."""
     by_app: dict[tuple, dict] = {}
     for apk in sorted(apk_dir.glob("*.apk")):
         p = parse_apk(apk.name)
         key = (p["app"], p["version"])
         row = by_app.setdefault(key, {
-            "app": p["app"], "version": p["version"],
-            "arches": [], "patch": patch_by_app.get(p["app"], ""),
+            "app": p["app"], "version": p["version"], "arches": [],
+            "patch": patch_by_app.get(p["app"], ""),
+            "author": author_by_app.get(p["app"], ""),
         })
         if p["arch"] not in row["arches"]:
             row["arches"].append(p["arch"])
@@ -68,6 +97,7 @@ def inventory_rows(manifest_path: Path) -> list[dict]:
             "version": version or "?",
             "arch": e.get("arch", "universal"),
             "patch": (e.get("patch_version") or "").strip(),
+            "author": author_of_source(e.get("source", "")),
         })
     return sorted(rows, key=lambda r: (r["app"], r["arch"]))
 
@@ -78,8 +108,13 @@ def render(updated: list[dict], inventory: list[dict]) -> str:
         out.append(f"### Updated in this build ({len(updated)})\n")
         for r in updated:
             ver = f" `{r['version']}`" if r["version"] else ""
-            patch = f" (patches `{r['patch']}`)" if r.get("patch") else ""
-            out.append(f"- **{pretty(r['app'])}**{ver}{patch} — {', '.join(r['arches'])}")
+            bits = []
+            if r.get("patch"):
+                bits.append(f"patches `{r['patch']}`")
+            if r.get("author"):
+                bits.append(f"by {r['author']}")
+            meta = f" ({', '.join(bits)})" if bits else ""
+            out.append(f"- **{pretty(r['app'])}**{ver}{meta} — {', '.join(r['arches'])}")
         out.append("")
 
     out.append("Stock APKs patched with the latest Morphe bundles. Rebuilt daily at 06:00 UTC.")
@@ -89,10 +124,10 @@ def render(updated: list[dict], inventory: list[dict]) -> str:
 
     if inventory:
         out.append("<details><summary>All apps in this release</summary>\n")
-        out.append("| App | Version | Patches | Arch |")
-        out.append("|-----|---------|---------|------|")
+        out.append("| App | Version | Patches | Author | Arch |")
+        out.append("|-----|---------|---------|--------|------|")
         for r in inventory:
-            out.append(f"| {pretty(r['app'])} | {r['version']} | {r['patch'] or '—'} | {r['arch']} |")
+            out.append(f"| {pretty(r['app'])} | {r['version']} | {r['patch'] or '—'} | {r.get('author') or '—'} | {r['arch']} |")
         out.append("\n</details>")
         out.append("")
 
@@ -106,11 +141,14 @@ def _selftest() -> None:
     p = parse_apk("showly-universal-hxreborn-v1.2.3.apk")
     assert p == {"app": "showly", "version": "1.2.3", "arch": "universal"}, p
     md = render(
-        [{"app": "tiktok", "version": "43.8.3", "arches": ["arm64-v8a"], "patch": "0.4.0"}],
-        [{"app": "tiktok", "version": "43.8.3", "arch": "arm64-v8a", "patch": "0.4.0"}],
+        [{"app": "tiktok", "version": "43.8.3", "arches": ["arm64-v8a"], "patch": "0.4.0", "author": "hxreborn"}],
+        [{"app": "tiktok", "version": "43.8.3", "arch": "arm64-v8a", "patch": "0.4.0", "author": "hxreborn"}],
     )
-    assert "**Tiktok** `43.8.3` (patches `0.4.0`) — arm64-v8a" in md, md
-    assert "| Tiktok | 43.8.3 | 0.4.0 | arm64-v8a |" in md, md
+    assert "**Tiktok** `43.8.3` (patches `0.4.0`, by hxreborn) — arm64-v8a" in md, md
+    assert "| Tiktok | 43.8.3 | 0.4.0 | hxreborn | arm64-v8a |" in md, md
+    # author omitted cleanly when absent
+    md2 = render([{"app": "x", "version": "1", "arches": ["universal"], "patch": ""}], [])
+    assert "**X** `1` — universal" in md2, md2
     print("selftest ok")
 
 
@@ -120,7 +158,8 @@ def main() -> int:
         return 0
     inventory = inventory_rows(Path("manifest.json"))
     patch_by_app = {r["app"]: r["patch"] for r in inventory if r["patch"]}
-    updated = collect_updated(Path("release-apks"), patch_by_app)
+    author_by_app = {r["app"]: r["author"] for r in inventory if r.get("author")}
+    updated = collect_updated(Path("release-apks"), patch_by_app, author_by_app)
     Path("release_notes.md").write_text(render(updated, inventory), encoding="utf-8")
     print(f"Wrote release_notes.md ({len(updated)} updated, {len(inventory)} in inventory)")
     return 0
