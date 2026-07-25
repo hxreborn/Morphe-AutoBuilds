@@ -356,9 +356,9 @@ def main():
             arch_config = json.load(f)
         
         # Find arches for this app
-        arches = ["universal"]  # default
+        arches = [(getenv("ARCH") or "universal").strip()]
         for config in arch_config:
-            if config["app_name"] == app_name and config["source"] == source:
+            if not getenv("ARCH") and config["app_name"] == app_name and config["source"] == source:
                 arches = config["arches"]
                 break
         
