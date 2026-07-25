@@ -2,9 +2,9 @@
     "org": "proton-technologies-ag",
     "name": "protonvpn-secure-and-free-vpn",
     "release_prefix": "proton-vpn-fast-secure-vpn",
-    "type": "APK", 
+    "type": "BUNDLE",
     "arch": "universal",
-    "dpi": "nodpi",
+    "dpi": "120-640",
     "package" : "ch.protonvpn.android",
     "version" : "5.19.16.0"
 }
