@@ -37,6 +37,7 @@ def _cf_get(url, **kwargs):
 
     kwargs.setdefault("timeout", 20)
     response = session.get(url, **kwargs)
+
     if response.status_code == 403:
         body = response.text[:2000].lower()
         if response.headers.get("cf-mitigated") == "challenge" or "cloudflare" in body:
@@ -322,6 +323,9 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
     
     # Loop backwards: Try full version, then strip parts
     for i in range(len(version_parts), 0, -1):
+        if correct_version_page:
+            break
+
         current_ver_str = "-".join(version_parts[:i])
         
         # If build number exists, append it to the last version part in URL
@@ -450,10 +454,7 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
             except Exception as e:
                 logging.warning(f"Error checking {url}: {str(e)[:50]}")
                 continue
-        
-        if correct_version_page:
-            break  # Found correct page for this version part
-    
+
     # If we didn't find the exact version page but found a fallback
     if not correct_version_page and found_soup:
         logging.warning(f"Using fallback page for {app_name} {version} (may contain multiple versions)")
