@@ -371,7 +371,8 @@ jobs:
             gh release upload latest "${ASSETS[@]}" --clobber
             gh release edit latest \
               --title "Morphe APKs - $(date +'%Y-%m-%d %H:%M')" \
-              --notes-file release_notes.md
+              --notes-file release_notes.md \
+              --latest
           else
             echo "🆕 Creating 'latest' release..."
             gh release create "latest" \
