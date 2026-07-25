@@ -6,22 +6,46 @@ from urllib.parse import quote
 from src import session
 
 base_url = "https://www.apkmirror.com"
+_blocked_by_cloudflare = False
+
+
+class ApkMirrorBlocked(RuntimeError):
+    """APKMirror declined this runner before it served an application page."""
+
+
+def _app_slug_candidates(config: dict) -> list[str]:
+    """Return the small set of valid-looking APKMirror app slugs to try.
+
+    On APKMirror the publisher slug and app slug are sometimes identical
+    (for example ``/apk/pinterest/pinterest/``), while a human-readable app
+    title can be much longer.  Trying the publisher as a final fallback fixes
+    those genuine 404s without a site-wide search or browser automation.
+    """
+    candidates = [
+        config.get("app_slug"),
+        config.get("name"),
+        config.get("org"),
+    ]
+    return list(dict.fromkeys(slug for slug in candidates if slug))
 
 
 def _cf_get(url, **kwargs):
-    """GET with automatic Cloudflare Turnstile bypass (lazy, one-shot)."""
+    """Fetch without trying to defeat Cloudflare on a GitHub-hosted runner."""
+    global _blocked_by_cloudflare
+    if _blocked_by_cloudflare:
+        raise ApkMirrorBlocked("APKMirror blocked this runner earlier in the build")
+
+    kwargs.setdefault("timeout", 20)
     response = session.get(url, **kwargs)
-    try:
-        from src.cf_bypass import is_cf_challenge, solve_cloudflare
-        if is_cf_challenge(response):
-            logging.info(f"Cloudflare challenge on {url} — launching bypass…")
-            cookies = solve_cloudflare(url)
-            if cookies:
-                for name, value in cookies.items():
-                    session.cookies.set(name, value, domain=".apkmirror.com")
-                response = session.get(url, **kwargs)
-    except ImportError:
-        pass  # nodriver not installed; skip bypass
+    if response.status_code == 403:
+        body = response.text[:2000].lower()
+        if response.headers.get("cf-mitigated") == "challenge" or "cloudflare" in body:
+            _blocked_by_cloudflare = True
+            logging.warning(
+                "APKMirror served a Cloudflare challenge; skipping APKMirror "
+                "for this build instead of launching a browser."
+            )
+            raise ApkMirrorBlocked("APKMirror Cloudflare challenge")
     return response
 
 def get_build_number_for_version(version: str, config: dict) -> tuple[str | None, str]:
@@ -280,6 +304,12 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
                     logging.warning(f"Scraped URL returned page but version {version} not found in content")
         except Exception as e:
             logging.warning(f"Error fetching scraped URL: {e}")
+
+    # Once Cloudflare has challenged this runner, generated URL probes cannot
+    # succeed. Stop here so one app does not emit misleading 404s for every
+    # possible release slug and the configured fallback can run immediately.
+    if _blocked_by_cloudflare:
+        return None
     
     # --- FALLBACK: Construct URLs from config fields ---
     # Only used if scraping the main page didn't work
@@ -288,6 +318,7 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
     
     # Use release_prefix if available, otherwise use app name
     release_name = config.get('release_prefix', config['name'])
+    app_slugs = _app_slug_candidates(config)
     
     # Loop backwards: Try full version, then strip parts
     for i in range(len(version_parts), 0, -1):
@@ -309,33 +340,29 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
         
         # URL-encode the release_name to handle unicode characters like ․
         encoded_release_name = quote(release_name, safe='')
-        encoded_name = quote(config['name'], safe='')
         org = config.get('org', '')
         encoded_org = quote(org, safe='')
-        
-        # Priority 1: With release_name and -release suffix (most specific)
-        url_patterns.append(f"{base_url}/apk/{org}/{encoded_name}/{encoded_release_name}-{current_ver_str}-release/")
-        
-        # Priority 2: With app name and -release suffix
-        if release_name != config['name']:
-            url_patterns.append(f"{base_url}/apk/{org}/{encoded_name}/{encoded_name}-{current_ver_str}-release/")
-        
-        # Priority 3: With org name only + -release suffix
-        # APKMirror often uses {org}-{version}-release for apps where name={org}-{org}
-        # e.g., name="instagram-instagram" but release slug is "instagram-430-..."
-        if org and org != release_name and org != config['name']:
-            url_patterns.append(f"{base_url}/apk/{org}/{encoded_name}/{encoded_org}-{current_ver_str}-release/")
-        
-        # Priority 4: With release_name without -release
-        url_patterns.append(f"{base_url}/apk/{org}/{encoded_name}/{encoded_release_name}-{current_ver_str}/")
-        
-        # Priority 5: With app name without -release
-        if release_name != config['name']:
-            url_patterns.append(f"{base_url}/apk/{org}/{encoded_name}/{encoded_name}-{current_ver_str}/")
-        
-        # Priority 6: With org name only, without -release
-        if org and org != release_name and org != config['name']:
-            url_patterns.append(f"{base_url}/apk/{org}/{encoded_name}/{encoded_org}-{current_ver_str}/")
+
+        for app_slug in app_slugs:
+            encoded_name = quote(app_slug, safe='')
+
+            # Prefer the explicit release slug; it is more stable than a
+            # display name and supports apps whose title changes over time.
+            url_patterns.append(f"{base_url}/apk/{org}/{encoded_name}/{encoded_release_name}-{current_ver_str}-release/")
+
+            if release_name != app_slug:
+                url_patterns.append(f"{base_url}/apk/{org}/{encoded_name}/{encoded_name}-{current_ver_str}-release/")
+
+            if org and org != release_name and org != app_slug:
+                url_patterns.append(f"{base_url}/apk/{org}/{encoded_name}/{encoded_org}-{current_ver_str}-release/")
+
+            url_patterns.append(f"{base_url}/apk/{org}/{encoded_name}/{encoded_release_name}-{current_ver_str}/")
+
+            if release_name != app_slug:
+                url_patterns.append(f"{base_url}/apk/{org}/{encoded_name}/{encoded_name}-{current_ver_str}/")
+
+            if org and org != release_name and org != app_slug:
+                url_patterns.append(f"{base_url}/apk/{org}/{encoded_name}/{encoded_org}-{current_ver_str}/")
         
         # Remove duplicate patterns
         url_patterns = list(dict.fromkeys(url_patterns))
