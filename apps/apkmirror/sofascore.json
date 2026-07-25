@@ -1,7 +1,8 @@
 {
     "org": "sofascore",
     "name": "soccer-scores-and-sports-livescore-sofascore",
-    "type": "APK", 
+    "release_prefix": "sofascore-live-sports-scores",
+    "type": "BUNDLE",
     "arch": "arm64-v8a",
     "dpi": "480-640",
     "package" : "com.sofascore.results",
