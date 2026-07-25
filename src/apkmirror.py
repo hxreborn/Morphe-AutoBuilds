@@ -1,12 +1,15 @@
 import re
 import json
 import logging
+import time
 from bs4 import BeautifulSoup
 from urllib.parse import quote
 from src import session
 
 base_url = "https://www.apkmirror.com"
 _blocked_by_cloudflare = False
+_RATE_LIMIT_RETRIES = 4
+_RATE_LIMIT_MAX_DELAY = 30
 
 
 class ApkMirrorBlocked(RuntimeError):
@@ -29,6 +32,16 @@ def _app_slug_candidates(config: dict) -> list[str]:
     return list(dict.fromkeys(slug for slug in candidates if slug))
 
 
+def _retry_after_seconds(response) -> int | None:
+    raw = response.headers.get("Retry-After")
+    if not raw:
+        return None
+    try:
+        return max(1, min(int(raw.strip()), _RATE_LIMIT_MAX_DELAY))
+    except ValueError:
+        return None
+
+
 def _cf_get(url, **kwargs):
     """Fetch without trying to defeat Cloudflare on a GitHub-hosted runner."""
     global _blocked_by_cloudflare
@@ -36,7 +49,13 @@ def _cf_get(url, **kwargs):
         raise ApkMirrorBlocked("APKMirror blocked this runner earlier in the build")
 
     kwargs.setdefault("timeout", 20)
-    response = session.get(url, **kwargs)
+    for attempt in range(_RATE_LIMIT_RETRIES + 1):
+        response = session.get(url, **kwargs)
+        if response.status_code != 429 or attempt == _RATE_LIMIT_RETRIES:
+            break
+        delay = _retry_after_seconds(response) or min(2 ** (attempt + 1), _RATE_LIMIT_MAX_DELAY)
+        logging.info(f"APKMirror rate-limited {url}; retrying in {delay}s")
+        time.sleep(delay)
 
     if response.status_code == 403:
         body = response.text[:2000].lower()
