@@ -35,10 +35,11 @@ jobs:
             echo
             echo "https://github.com/RookieEnough/Morphe-AutoBuilds/commits/main"
           )
-          existing=$(gh issue list --state open --search 'in:title "sync upstream"' \
-            --json number --jq '.[0].number // empty')
+          # -R is required: gh routes issues on a fork to the parent by default
+          existing=$(gh issue list -R "$GITHUB_REPOSITORY" --state open \
+            --search 'in:title "sync upstream"' --json number --jq '.[0].number // empty')
           if [ -n "$existing" ]; then
-            gh issue edit "$existing" --title "$title" --body "$body"
+            gh issue edit "$existing" -R "$GITHUB_REPOSITORY" --title "$title" --body "$body"
           else
-            gh issue create --title "$title" --body "$body"
+            gh issue create -R "$GITHUB_REPOSITORY" --title "$title" --body "$body"
           fi
