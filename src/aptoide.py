@@ -58,7 +58,8 @@ def get_download_link(version: str, app_name: str, config: Dict) -> Optional[str
     # Find vercode for specific version
     url_versions = f"{BASE_URL}listAppVersions?package_name={package}&limit=50{q}"
     data = _safe_get_json(url_versions) or {}
-    items = (((data.get("datalist") or {}).get("list")) or [])
+    # listAppVersions returns a top-level list, unlike apps/search
+    items = data.get("list") or ((data.get("datalist") or {}).get("list")) or []
     vercode = None
     for app in items:
         try:
