@@ -9,14 +9,16 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
+      issues: write
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Open PR if upstream has new commits
+      # An issue, not a PR: pushing upstream/main needs a `workflows` scope
+      # GITHUB_TOKEN cannot hold, and upstream keeps changing workflow files.
+      - name: Report if upstream has new commits
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -27,8 +29,16 @@ jobs:
             echo "Up to date with upstream"
             exit 0
           fi
-          git push -f origin upstream/main:refs/heads/upstream-sync
-          gh pr create --base main --head upstream-sync \
-            --title "chore: sync upstream ($new new commits)" \
-            --body "$(git log --oneline HEAD..upstream/main | head -30)" \
-            || echo "PR already open, branch updated"
+          title="chore: sync upstream ($new new commits)"
+          body=$(
+            git log --oneline --no-decorate HEAD..upstream/main | head -30
+            echo
+            echo "https://github.com/RookieEnough/Morphe-AutoBuilds/commits/main"
+          )
+          existing=$(gh issue list --state open --search 'in:title "sync upstream"' \
+            --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue edit "$existing" --title "$title" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body"
+          fi
