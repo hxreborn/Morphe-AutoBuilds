@@ -353,18 +353,28 @@ jobs:
           if [ "${{ steps.check-release.outputs.release_exists }}" = "true" ]; then
             echo "⬆️ Uploading rebuilt assets in place and refreshing release metadata..."
 
-            # Delete superseded older-version APKs. The previous loop only deleted
-            # assets whose filename EXACTLY matched a new APK; since APK names
-            # embed the version, old versions (e.g. v2.4.0) never matched the new
-            # v2.5.0 and accumulated forever. cleanup_old_apks.py deletes any
-            # release APK sharing a {app}-{arch}- identity prefix with a new APK
-            # but with a different version.
+            # Delete superseded versions plus apps/arches removed from the
+            # manifest, while preserving unchanged carry-overs.
+            # The manifest is the full desired inventory, including unchanged
+            # carry-overs. New files are appended defensively in case a record
+            # could not be merged.
             : > keep_apks.txt
+            CLEANUP_ARGS=()
+            if [ -f ./release-apks/manifest.json ]; then
+              jq -r '.entries[]?.apk // empty' ./release-apks/manifest.json >> keep_apks.txt
+              CLEANUP_ARGS+=(--prune)
+            else
+              echo "⚠️ No final manifest; retired-asset pruning is disabled for safety"
+            fi
             for apk in ./release-apks/*.apk; do
               [ -f "$apk" ] || continue
               basename "$apk" >> keep_apks.txt
             done
-            python scripts/cleanup_old_apks.py --release latest --keep-file keep_apks.txt || \
+            sort -u -o keep_apks.txt keep_apks.txt
+            python scripts/cleanup_old_apks.py \
+              --release latest \
+              --keep-file keep_apks.txt \
+              "${CLEANUP_ARGS[@]}" || \
               echo "⚠️  cleanup_old_apks.py failed; continuing with exact-name cleanup"
 
             # Upload new APKs and manifest

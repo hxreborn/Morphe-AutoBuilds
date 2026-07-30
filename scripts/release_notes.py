@@ -91,7 +91,10 @@ def inventory_rows(manifest_path: Path) -> list[dict]:
         return []
     rows = []
     for e in entries.values():
-        version = (e.get("built_version") or "").strip() or extract_version_from_filename(e.get("apk", ""))
+        apk = (e.get("apk") or "").strip()
+        if not apk:
+            continue
+        version = (e.get("built_version") or "").strip() or extract_version_from_filename(apk)
         rows.append({
             "app": e.get("app_name", ""),
             "version": version or "?",
@@ -119,7 +122,7 @@ def render(updated: list[dict], inventory: list[dict]) -> str:
 
     out.append("Stock APKs patched with the latest Morphe bundles. Rebuilt daily at 06:00 UTC.")
     out.append("")
-    out.append("`universal` runs on any ARM device, `arm64-v8a` only on 64-bit ones.")
+    out.append("All published APKs are validated standalone `arm64-v8a` builds.")
     out.append("")
 
     if inventory:

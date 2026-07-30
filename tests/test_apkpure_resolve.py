@@ -33,6 +33,20 @@ def test_extracts_version_from_real_filenames():
         assert url.startswith("https://d.apkpure.com/b/APK/"), url
 
 
+def test_can_prefer_complete_xapk_bundle():
+    calls = []
+
+    def fake_get(url, **kwargs):
+        calls.append(url)
+        return FakeResponse(CDN.format("ForusApp_3.0.14_APKPure.xapk"))
+
+    apkpure.session.get = fake_get
+    url, version = apkpure._resolve_latest("com.myvitale.forus", prefer_xapk=True)
+    assert calls[0].startswith("https://d.apkpure.com/b/XAPK/"), calls
+    assert url.startswith("https://d.apkpure.com/b/XAPK/"), url
+    assert version == "3.0.14", version
+
+
 def test_stub_redirect_and_junk_resolve_to_none():
     for location in ["https://apkpure.com", "https://apkpure.com/", "", "https://x/?a=b"]:
         apkpure.session.get = lambda *a, **k: FakeResponse(location)
@@ -53,6 +67,7 @@ def main():
     real_get = apkpure.session.get
     try:
         test_extracts_version_from_real_filenames()
+        test_can_prefer_complete_xapk_bundle()
         test_stub_redirect_and_junk_resolve_to_none()
         test_pinned_version_refuses_a_mismatched_release()
     finally:

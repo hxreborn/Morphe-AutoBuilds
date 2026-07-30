@@ -9,18 +9,21 @@ Fork of [RookieEnough/Morphe-AutoBuilds](https://github.com/RookieEnough/Morphe-
 | App | Patch bundle | APK source | Version | Arch |
 | :-- | :-- | :-- | :-- | :-- |
 | TikTok | [hxreborn/tiktok-patches-for-morphe](https://github.com/hxreborn/tiktok-patches-for-morphe) | GitHub mirror | 43.8.3 | arm64-v8a |
-| Showly | [hxreborn/morphe-patches](https://github.com/hxreborn/morphe-patches) | APKMirror | latest | universal |
-| Projectivy | [hxreborn/morphe-patches](https://github.com/hxreborn/morphe-patches) | APKPure | latest | universal |
-| Forus | [hxreborn/morphe-patches](https://github.com/hxreborn/morphe-patches) | APKPure | latest | universal |
-| Proton VPN | [Paresh-Maheshwari/paresh-patches](https://gitlab.com/Paresh-Maheshwari/paresh-patches) | APKMirror | 5.19.16.0 | universal |
-| SAI | [rushiranpise/morphe-patches](https://github.com/rushiranpise/morphe-patches) | APKPure | 2.2.8 | universal |
-| Speedtest | [rushiranpise/morphe-patches](https://github.com/rushiranpise/morphe-patches) | APKPure | 7.0.7 | universal |
-| Splitwise | [rushiranpise/morphe-patches](https://github.com/rushiranpise/morphe-patches) | Uptodown | 26.7.2 | universal |
-| Send Files To TV | [rushiranpise/morphe-patches](https://github.com/rushiranpise/morphe-patches) | APKPure | 1.4.22 | universal |
-| Torrent Search Revolution V2 | [rushiranpise/morphe-patches](https://github.com/rushiranpise/morphe-patches) | APKPure | 2.3.3 | universal |
-| Parcels | [rushiranpise/morphe-patches](https://github.com/rushiranpise/morphe-patches) | APKPure | 3.0.11 | universal |
-| Network Guru | [rushiranpise/morphe-patches](https://github.com/rushiranpise/morphe-patches) | APKPure | 1.9-beta5 | universal |
-| SofaScore | [arandomhooman/hoomans-morphe-patches](https://github.com/arandomhooman/hoomans-morphe-patches) | APKMirror | 26.06.23 | universal |
+| Showly | [hxreborn/morphe-patches](https://github.com/hxreborn/morphe-patches) | APKMirror | latest | arm64-v8a |
+| Projectivy | [hxreborn/morphe-patches](https://github.com/hxreborn/morphe-patches) | APKPure | latest | arm64-v8a |
+| Forus | [hxreborn/morphe-patches](https://github.com/hxreborn/morphe-patches) | APKPure XAPK | latest | arm64-v8a |
+| Proton Mail | [hxreborn/morphe-patches](https://github.com/hxreborn/morphe-patches) | APKMirror | 4.15.0 | arm64-v8a |
+| Proton VPN | [Paresh-Maheshwari/paresh-patches](https://gitlab.com/Paresh-Maheshwari/paresh-patches) | APKMirror | 5.19.16.0 | arm64-v8a |
+| SAI | [rushiranpise/morphe-patches](https://github.com/rushiranpise/morphe-patches) | APKPure | 2.3.1 | arm64-v8a |
+| Speedtest | [rushiranpise/morphe-patches](https://github.com/rushiranpise/morphe-patches) | APKPure | 7.0.7 | arm64-v8a |
+| Splitwise | [rushiranpise/morphe-patches](https://github.com/rushiranpise/morphe-patches) | APKPure | 26.7.2 | arm64-v8a |
+| Send Files To TV | [rushiranpise/morphe-patches](https://github.com/rushiranpise/morphe-patches) | APKPure | 1.4.22 | arm64-v8a |
+| Parcels | [rushiranpise/morphe-patches](https://github.com/rushiranpise/morphe-patches) | APKPure | 3.0.11 | arm64-v8a |
+| Network Guru | [rushiranpise/morphe-patches](https://github.com/rushiranpise/morphe-patches) | APKPure XAPK | 1.9-beta5 | arm64-v8a |
+| SofaScore | [arandomhooman/hoomans-morphe-patches](https://github.com/arandomhooman/hoomans-morphe-patches) | APKMirror | 26.06.23 | arm64-v8a |
+
+The release only publishes standalone APKs that pass signature, split-manifest,
+and native ABI validation for `arm64-v8a`.
 
 ## Running locally
 

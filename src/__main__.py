@@ -6,6 +6,7 @@ from pathlib import Path
 from os import getenv
 import subprocess
 from src import (
+    apk_validation,
     r2,
     utils,
     downloader
@@ -24,7 +25,7 @@ def _should_retry_with_older_version(output: str | None) -> bool:
         or "patching aborted" in t
     )
 
-def run_build(app_name: str, source: str, arch: str = "universal") -> str:
+def run_build(app_name: str, source: str, arch: str = "universal") -> str | None:
     """Build APK for specific architecture"""
     download_files, name = downloader.download_required(source)
 
@@ -191,19 +192,26 @@ def run_build(app_name: str, source: str, arch: str = "universal") -> str:
             input_apk = merged_apk
             logging.info(f"Merged APK file generated: {input_apk}")
 
+        # Reject v7a-only APKs before deleting anything. Removing the only
+        # native libraries makes an APK installable but guarantees a crash.
+        input_abis = apk_validation.require_target_abi(input_apk, arch)
+        native_required = bool(input_abis)
+
         # --- ARCHITECTURE-SPECIFIC PROCESSING ---
         if arch != "universal":
             logging.info(f"Processing APK for {arch} architecture...")
-            if arch == "arm64-v8a":
+            foreign_abis = sorted(input_abis - {arch})
+            if foreign_abis:
                 utils.run_process([
                     "zip", "--delete", str(input_apk),
-                    "lib/x86/*", "lib/x86_64/*", "lib/armeabi-v7a/*"
+                    *[f"lib/{abi}/*" for abi in foreign_abis]
                 ], silent=True, check=False)
-            elif arch == "armeabi-v7a":
-                utils.run_process([
-                    "zip", "--delete", str(input_apk),
-                    "lib/x86/*", "lib/x86_64/*", "lib/arm64-v8a/*"
-                ], silent=True, check=False)
+            apk_validation.require_target_abi(
+                input_apk,
+                arch,
+                native_required=native_required,
+                target_only=True,
+            )
         else:
             utils.run_process([
                 "zip", "--delete", str(input_apk),
@@ -302,6 +310,31 @@ def run_build(app_name: str, source: str, arch: str = "universal") -> str:
                 continue
             raise
 
+        aapt = utils.find_aapt()
+        if not aapt:
+            raise RuntimeError("aapt not found")
+
+        # Bundle-base APKs from APKPure can retain Play's requiredSplitTypes
+        # marker even after patching. Repair the marker before signing, then
+        # reject anything that is still not a standalone APK.
+        manifest_dump = apk_validation.dump_manifest(output_apk, Path(aapt))
+        if apk_validation.requires_splits(manifest_dump):
+            apk_editor = downloader.download_apkeditor()
+            if apk_validation.remove_required_split_metadata(
+                output_apk,
+                Path(apk_editor),
+                Path(aapt),
+            ):
+                logging.info("Removed stale required-split metadata")
+
+        apk_validation.require_target_abi(
+            output_apk,
+            arch,
+            native_required=native_required,
+            target_only=arch != "universal",
+        )
+        apk_validation.validate_standalone_manifest(output_apk, Path(aapt))
+
         # Patch succeeded -> cleanup input and sign.
         input_apk.unlink(missing_ok=True)
 
@@ -334,6 +367,11 @@ def run_build(app_name: str, source: str, arch: str = "universal") -> str:
                 "--in", str(output_apk), "--out", str(signed_apk)
             ], capture=True, stream=True)
 
+        utils.run_process(
+            [str(apksigner), "verify", "--verbose", str(signed_apk)],
+            capture=True,
+            stream=True,
+        )
         output_apk.unlink(missing_ok=True)
         print(f"✅ APK built: {signed_apk.name}")
         return str(signed_apk)
@@ -375,6 +413,8 @@ def main():
         print(f"\n🎯 Built {len(built_apks)} APK(s) for {app_name}:")
         for apk in built_apks:
             print(f"  📱 {Path(apk).name}")
+        if not built_apks:
+            raise SystemExit(1)
         
     else:
         # Fallback to single universal build
@@ -382,6 +422,8 @@ def main():
         apk_path = run_build(app_name, source, "universal")
         if apk_path:
             print(f"🎯 Final APK path: {apk_path}")
+        else:
+            raise SystemExit(1)
 
 if __name__ == "__main__":
     main()

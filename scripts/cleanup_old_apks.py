@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Delete superseded (older-version) APK assets from the 'latest' release.
+"""Delete superseded or retired APK assets from the 'latest' release.
 
 Problem this solves
 -------------------
@@ -26,6 +26,8 @@ Inputs
   (typically ``release-apks/current_assets.txt``). Anything listed here is never
   deleted.
 - ``--release``: release tag to clean (default ``latest``).
+- ``--prune``: also delete APKs absent from the keep-set. Use this when the
+  keep-file represents the complete desired release inventory.
 
 The current APK asset names are read via ``gh release view --json assets`` so we
 never need to download the heavy APK files.
@@ -88,6 +90,22 @@ def load_keep_set(keep_file: Path) -> Set[str]:
         if line:
             names.add(line)
     return names
+
+
+def assets_to_delete(
+    assets: List[dict],
+    keep: Set[str],
+    prune: bool = False,
+) -> List[dict]:
+    keep_prefixes = {identity_prefix(name) for name in keep}
+    selected = []
+    for asset in assets:
+        name = str(asset.get("name", ""))
+        if not name or name in keep:
+            continue
+        if prune or identity_prefix(name) in keep_prefixes:
+            selected.append(asset)
+    return selected
 
 
 def delete_asset_by_name(release: str, name: str) -> tuple:
@@ -159,6 +177,11 @@ def main() -> int:
     parser.add_argument("--release", default="latest", help="release tag (default: latest)")
     parser.add_argument("--keep-file", required=True,
                         help="newline-delimited file of APK basenames to preserve")
+    parser.add_argument(
+        "--prune",
+        action="store_true",
+        help="delete every APK absent from the keep-set, including retired apps/arches",
+    )
     parser.add_argument("--dry-run", action="store_true", help="list deletions without performing them")
     args = parser.parse_args()
 
@@ -169,21 +192,10 @@ def main() -> int:
         print("No existing APK assets to clean up.")
         return 0
 
-    # Identity prefixes that must be preserved (one or more of the keep-set may
-    # share a prefix when multiple arches of the same app are kept).
-    keep_prefixes = {identity_prefix(n) for n in keep}
-
-    to_delete = []  # list of asset dicts
-    for asset in assets:
-        name = str(asset.get("name", ""))
-        if not name or name in keep:
-            continue  # explicitly kept (or unnamed)
-        if identity_prefix(name) in keep_prefixes:
-            to_delete.append(asset)  # same app/arch, but a different (older) version
-        # else: an app/arch we didn't rebuild this run -> leave it untouched
+    to_delete = assets_to_delete(assets, keep, args.prune)
 
     if not to_delete:
-        print("No superseded APK assets found.")
+        print("No stale APK assets found.")
         return 0
 
     print(f"Found {len(to_delete)} superseded APK asset(s) to remove:")

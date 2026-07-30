@@ -4,12 +4,12 @@
     { "app_name": "showly", "source": "hxreborn" },
     { "app_name": "projectivy", "source": "hxreborn" },
     { "app_name": "forus", "source": "hxreborn" },
+    { "app_name": "proton-mail", "source": "hxreborn" },
     { "app_name": "proton-vpn", "source": "paresh" },
     { "app_name": "sai", "source": "rushiranpise" },
     { "app_name": "speedtest", "source": "rushiranpise" },
     { "app_name": "splitwise", "source": "rushiranpise" },
     { "app_name": "send-files-to-tv", "source": "rushiranpise" },
-    { "app_name": "torrent-search-revolution", "source": "rushiranpise" },
     { "app_name": "parcels", "source": "rushiranpise" },
     { "app_name": "network-guru", "source": "rushiranpise" },
     { "app_name": "sofascore", "source": "hoomans-morphe" }

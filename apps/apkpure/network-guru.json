@@ -1,5 +1,6 @@
 {
     "name": "network-guru-speed-indicator",
     "package": "com.paget96.netspeedindicator",
+    "prefer_xapk": true,
     "version": "1.9-beta5"
 }

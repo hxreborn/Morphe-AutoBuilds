@@ -1,5 +1,6 @@
 {
     "name": "forus",
     "package": "com.myvitale.forus",
+    "prefer_xapk": true,
     "version": ""
 }

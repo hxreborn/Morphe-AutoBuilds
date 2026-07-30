@@ -88,8 +88,8 @@ def find_file(files: list[Path], prefix: str = None, suffix: str = None, contain
     
     return None
 
-def find_apksigner() -> str | None:
-    on_path = shutil.which("apksigner")
+def find_android_build_tool(name: str) -> str | None:
+    on_path = shutil.which(name)
     if on_path:
         return on_path
 
@@ -107,15 +107,24 @@ def find_apksigner() -> str | None:
             continue
         versions = sorted(build_tools_dir.iterdir(), reverse=True)
         for version_dir in versions:
-            apksigner_path = version_dir / "apksigner"
-            if apksigner_path.exists() and apksigner_path.is_file():
-                return str(apksigner_path)
+            tool_path = version_dir / name
+            if tool_path.exists() and tool_path.is_file():
+                return str(tool_path)
 
     logging.error(
-        "No apksigner found. Install Android SDK build-tools and either put "
-        "apksigner on PATH or set ANDROID_HOME/ANDROID_SDK_ROOT."
+        f"No {name} found. Install Android SDK build-tools and either put "
+        f"{name} on PATH or set ANDROID_HOME/ANDROID_SDK_ROOT."
     )
     return None
+
+
+def find_apksigner() -> str | None:
+    return find_android_build_tool("apksigner")
+
+
+def find_aapt() -> str | None:
+    return find_android_build_tool("aapt")
+
 
 def run_process(
     command: List[str],

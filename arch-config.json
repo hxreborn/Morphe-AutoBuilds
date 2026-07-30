@@ -3,5 +3,65 @@
     "app_name": "tiktok",
     "source": "hxreborn-tiktok",
     "arches": ["arm64-v8a"]
+  },
+  {
+    "app_name": "showly",
+    "source": "hxreborn",
+    "arches": ["arm64-v8a"]
+  },
+  {
+    "app_name": "projectivy",
+    "source": "hxreborn",
+    "arches": ["arm64-v8a"]
+  },
+  {
+    "app_name": "forus",
+    "source": "hxreborn",
+    "arches": ["arm64-v8a"]
+  },
+  {
+    "app_name": "proton-mail",
+    "source": "hxreborn",
+    "arches": ["arm64-v8a"]
+  },
+  {
+    "app_name": "proton-vpn",
+    "source": "paresh",
+    "arches": ["arm64-v8a"]
+  },
+  {
+    "app_name": "sai",
+    "source": "rushiranpise",
+    "arches": ["arm64-v8a"]
+  },
+  {
+    "app_name": "speedtest",
+    "source": "rushiranpise",
+    "arches": ["arm64-v8a"]
+  },
+  {
+    "app_name": "splitwise",
+    "source": "rushiranpise",
+    "arches": ["arm64-v8a"]
+  },
+  {
+    "app_name": "send-files-to-tv",
+    "source": "rushiranpise",
+    "arches": ["arm64-v8a"]
+  },
+  {
+    "app_name": "parcels",
+    "source": "rushiranpise",
+    "arches": ["arm64-v8a"]
+  },
+  {
+    "app_name": "network-guru",
+    "source": "rushiranpise",
+    "arches": ["arm64-v8a"]
+  },
+  {
+    "app_name": "sofascore",
+    "source": "hoomans-morphe",
+    "arches": ["arm64-v8a"]
   }
 ]

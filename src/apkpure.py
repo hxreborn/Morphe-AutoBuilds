@@ -18,13 +18,14 @@ _FILENAME = re.compile(r"filename=([^&]+)")
 _VERSION_IN_FILENAME = re.compile(r"_([^_]+)_APKPure\.[a-z]+$", re.I)
 
 
-def _resolve_latest(package: str) -> tuple[str, str] | None:
+def _resolve_latest(package: str, prefer_xapk: bool = False) -> tuple[str, str] | None:
     """Return (download url, version) from APKPure's download host, or None.
 
     apkpure.net answers datacenter IPs with a Cloudflare challenge; this host
     does not, but it only ever serves the current release.
     """
-    for kind in ("APK", "XAPK"):
+    kinds = ("XAPK", "APK") if prefer_xapk else ("APK", "XAPK")
+    for kind in kinds:
         url = f"https://d.apkpure.com/b/{kind}/{package}?version=latest"
         try:
             response = session.get(url, timeout=25, allow_redirects=False)
@@ -47,8 +48,8 @@ def _resolve_latest(package: str) -> tuple[str, str] | None:
     return None
 
 
-def get_latest_version(app_name: str, config: str) -> str:
-    resolved = _resolve_latest(config['package'])
+def get_latest_version(app_name: str, config: dict) -> str:
+    resolved = _resolve_latest(config['package'], config.get("prefer_xapk", False))
     if resolved:
         return resolved[1]
 
@@ -73,8 +74,8 @@ def get_latest_version(app_name: str, config: str) -> str:
         
     return None
 
-def get_download_link(version: str, app_name: str, config: str) -> str:
-    resolved = _resolve_latest(config['package'])
+def get_download_link(version: str, app_name: str, config: dict) -> str:
+    resolved = _resolve_latest(config['package'], config.get("prefer_xapk", False))
     if resolved:
         download_url, latest = resolved
         if latest == version:
