@@ -53,6 +53,31 @@ def test_stub_redirect_and_junk_resolve_to_none():
         assert apkpure._resolve_latest("com.example") is None, location
 
 
+def test_transient_latest_lookup_is_retried():
+    calls = 0
+
+    def flaky_get(url, **kwargs):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise TimeoutError("temporary timeout")
+        return FakeResponse(CDN.format("Network+Guru_1.9-beta5_APKPure.xapk"))
+
+    real_sleep = apkpure.time.sleep
+    apkpure.time.sleep = lambda _: None
+    try:
+        apkpure.session.get = flaky_get
+        resolved = apkpure._resolve_latest(
+            "com.paget96.netspeedindicator", prefer_xapk=True
+        )
+    finally:
+        apkpure.time.sleep = real_sleep
+
+    assert resolved is not None
+    assert resolved[1] == "1.9-beta5"
+    assert calls == 2
+
+
 def test_pinned_version_refuses_a_mismatched_release():
     apkpure.session.get = lambda *a, **k: FakeResponse(
         CDN.format("SAI%3A+Split+APKs+Installer_2.3.1_APKPure.xapk")
@@ -69,6 +94,7 @@ def main():
         test_extracts_version_from_real_filenames()
         test_can_prefer_complete_xapk_bundle()
         test_stub_redirect_and_junk_resolve_to_none()
+        test_transient_latest_lookup_is_retried()
         test_pinned_version_refuses_a_mismatched_release()
     finally:
         apkpure.session.get = real_get

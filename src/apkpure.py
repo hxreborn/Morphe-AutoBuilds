@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+import time
 from urllib.parse import unquote
 
 from src import session
@@ -16,6 +17,7 @@ HEADERS = {
 _STUB_REDIRECT = "https://apkpure.com"
 _FILENAME = re.compile(r"filename=([^&]+)")
 _VERSION_IN_FILENAME = re.compile(r"_([^_]+)_APKPure\.[a-z]+$", re.I)
+_LATEST_RETRIES = 3
 
 
 def _resolve_latest(package: str, prefer_xapk: bool = False) -> tuple[str, str] | None:
@@ -27,10 +29,23 @@ def _resolve_latest(package: str, prefer_xapk: bool = False) -> tuple[str, str] 
     kinds = ("XAPK", "APK") if prefer_xapk else ("APK", "XAPK")
     for kind in kinds:
         url = f"https://d.apkpure.com/b/{kind}/{package}?version=latest"
-        try:
-            response = session.get(url, timeout=25, allow_redirects=False)
-        except Exception as e:
-            logging.debug(f"APKPure download host failed for {package}: {e}")
+        response = None
+        for attempt in range(_LATEST_RETRIES):
+            try:
+                response = session.get(url, timeout=25, allow_redirects=False)
+                break
+            except Exception as e:
+                logging.warning(
+                    "APKPure %s lookup attempt %d/%d failed for %s: %s",
+                    kind,
+                    attempt + 1,
+                    _LATEST_RETRIES,
+                    package,
+                    e,
+                )
+                if attempt + 1 < _LATEST_RETRIES:
+                    time.sleep(2 ** attempt)
+        if response is None:
             continue
 
         location = response.headers.get("location", "")

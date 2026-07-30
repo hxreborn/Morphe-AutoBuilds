@@ -150,16 +150,14 @@ def download_platform(
         with config_path.open() as json_file:
             config = json.load(json_file)
         
-        # APKMirror's standalone "universal" APK is often the only monolithic
-        # row even when it contains arm64 libraries. Keep that download
-        # selector intact and trim/validate the APK after download. Bundles and
-        # providers with explicit ABI variants should still receive the target.
-        preserve_universal_apkmirror_apk = (
+        # APKMirror's "universal" row can be the only variant containing arm64,
+        # including for bundles. Keep that selector intact; bundle merging and
+        # the post-download ABI pass produce the target-only standalone APK.
+        preserve_universal_apkmirror_variant = (
             platform == "apkmirror"
-            and str(config.get("type", "")).upper() != "BUNDLE"
             and config.get("arch") == "universal"
         )
-        if arch and not preserve_universal_apkmirror_apk:
+        if arch and not preserve_universal_apkmirror_variant:
             config['arch'] = arch
 
         platform_module = globals()[platform]
