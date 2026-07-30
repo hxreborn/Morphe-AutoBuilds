@@ -18,7 +18,7 @@ def test_default_cleanup_only_removes_superseded_versions():
     assets = [
         {"name": "forus-arm64-v8a-hxreborn-v3.0.13.apk"},
         {"name": "forus-arm64-v8a-hxreborn-v3.0.14.apk"},
-        {"name": "torrent-search-revolution-universal-rush-v2.3.3.apk"},
+        {"name": "retired-app-universal-rush-v1.0.0.apk"},
     ]
     keep = {"forus-arm64-v8a-hxreborn-v3.0.14.apk"}
     deleted = assets_to_delete(assets, keep)
@@ -31,13 +31,13 @@ def test_prune_removes_retired_apps_and_arches():
     assets = [
         {"name": "forus-universal-hxreborn-v3.0.14.apk"},
         {"name": "forus-arm64-v8a-hxreborn-v3.0.14.apk"},
-        {"name": "torrent-search-revolution-universal-rush-v2.3.3.apk"},
+        {"name": "retired-app-universal-rush-v1.0.0.apk"},
     ]
     keep = {"forus-arm64-v8a-hxreborn-v3.0.14.apk"}
     deleted = assets_to_delete(assets, keep, prune=True)
     assert [asset["name"] for asset in deleted] == [
         "forus-universal-hxreborn-v3.0.14.apk",
-        "torrent-search-revolution-universal-rush-v2.3.3.apk",
+        "retired-app-universal-rush-v1.0.0.apk",
     ]
 
 
