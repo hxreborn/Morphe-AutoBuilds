@@ -1,0 +1,10 @@
+{
+    "org": "splitwise",
+    "name": "splitwise",
+    "release_prefix": "splitwise",
+    "type": "APK",
+    "arch": "universal",
+    "dpi": "nodpi",
+    "package": "com.Splitwise.SplitwiseMobile",
+    "version": "26.7.2"
+}

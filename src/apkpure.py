@@ -99,6 +99,47 @@ def get_download_link(version: str, app_name: str, config: dict) -> str:
             f"APKPure serves only {latest} for {app_name}; {version} needs another source"
         )
 
+    # APKPure's exact-version pages are sometimes blocked on datacenter IPs,
+    # while its download host remains available. A pinned versionCode lets us
+    # use that stable endpoint directly and verify the version from its
+    # Content-Disposition redirect before downloading anything.
+    version_code = str(config.get("version_code") or "").strip()
+    if version_code:
+        kind = "XAPK" if config.get("prefer_xapk", False) else "APK"
+        params = [f"versionCode={version_code}"]
+        if config.get("arch"):
+            params.append(f"nc={config['arch']}")
+        if config.get("min_sdk"):
+            params.append(f"sv={config['min_sdk']}")
+        pinned_url = (
+            f"https://d.apkpure.net/b/{kind}/{config['package']}?"
+            + "&".join(params)
+        )
+        try:
+            response = session.get(pinned_url, timeout=25, allow_redirects=False)
+            filename = _FILENAME.search(response.headers.get("location", ""))
+            resolved_version = (
+                _VERSION_IN_FILENAME.search(unquote(filename.group(1)))
+                if filename
+                else None
+            )
+            if resolved_version and resolved_version.group(1) == version:
+                return pinned_url
+            logging.warning(
+                "APKPure versionCode %s resolved to %s instead of %s for %s",
+                version_code,
+                resolved_version.group(1) if resolved_version else "unknown",
+                version,
+                app_name,
+            )
+        except Exception as e:
+            logging.warning(
+                "APKPure pinned download lookup failed for %s v%s: %s",
+                app_name,
+                version,
+                e,
+            )
+
     # APKPure often uses a specific structure for download pages
     url = f"https://apkpure.net/{config['name']}/{config['package']}/download/{version}"
 

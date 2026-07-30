@@ -1,5 +1,9 @@
 {
-    "name": "sai-split-apks-installer",
-    "package": "com.mtv.sai",
-    "version": "2.3.1"
+  "name": "sai-split-apks-installer",
+  "package": "com.mtv.sai",
+  "prefer_xapk": true,
+  "version": "2.3.1",
+  "version_code": 43,
+  "min_sdk": 32,
+  "sha256": "188e8ec35628c0ed6578596ca9e6d0b0956c8fe174166417028098e953738af3"
 }

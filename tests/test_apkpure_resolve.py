@@ -88,6 +88,32 @@ def test_pinned_version_refuses_a_mismatched_release():
     assert apkpure.get_download_link("2.2.8", "sai", config) is None
 
 
+def test_pinned_version_code_bypasses_exact_version_page():
+    responses = iter(
+        [
+            FakeResponse(
+                CDN.format("SAI%3A+Split+APKs+Installer_2.3.2_APKPure.xapk")
+            ),
+            FakeResponse(
+                CDN.format("SAI%3A+Split+APKs+Installer_2.3.1_APKPure.xapk")
+            ),
+        ]
+    )
+    apkpure.session.get = lambda *a, **k: next(responses)
+    config = {
+        "package": "com.mtv.sai",
+        "name": "sai-split-apks-installer",
+        "prefer_xapk": True,
+        "version_code": 43,
+        "arch": "arm64-v8a",
+        "min_sdk": 32,
+    }
+    url = apkpure.get_download_link("2.3.1", "sai", config)
+    assert url is not None
+    assert "versionCode=43" in url
+    assert "nc=arm64-v8a" in url
+
+
 def main():
     real_get = apkpure.session.get
     try:
@@ -96,6 +122,7 @@ def main():
         test_stub_redirect_and_junk_resolve_to_none()
         test_transient_latest_lookup_is_retried()
         test_pinned_version_refuses_a_mismatched_release()
+        test_pinned_version_code_bypasses_exact_version_page()
     finally:
         apkpure.session.get = real_get
 
