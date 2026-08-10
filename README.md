@@ -8,7 +8,7 @@ Fork of [RookieEnough/Morphe-AutoBuilds](https://github.com/RookieEnough/Morphe-
 
 | App | Patch bundle | APK source | Version | Arch |
 | :-- | :-- | :-- | :-- | :-- |
-| TikTok | [hxreborn/tiktok-patches-for-morphe](https://github.com/hxreborn/tiktok-patches-for-morphe) | GitHub mirror | 43.8.3 | arm64-v8a |
+| TikTok | [hxreborn/tiktok-patches-for-morphe](https://github.com/hxreborn/tiktok-patches-for-morphe) | GitHub mirror | 46.2.3 | arm64-v8a |
 | Showly | [hxreborn/morphe-patches](https://github.com/hxreborn/morphe-patches) | APKMirror | latest | arm64-v8a |
 | Projectivy | [hxreborn/morphe-patches](https://github.com/hxreborn/morphe-patches) | APKPure | latest | arm64-v8a |
 | Forus | [hxreborn/morphe-patches](https://github.com/hxreborn/morphe-patches) | APKPure XAPK | latest | arm64-v8a |
