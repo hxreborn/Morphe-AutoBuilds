@@ -111,7 +111,7 @@ def test_pinned_version_code_bypasses_exact_version_page():
     url = apkpure.get_download_link("2.3.1", "sai", config)
     assert url is not None
     assert "versionCode=43" in url
-    assert "nc=arm64-v8a" in url
+    assert "nc=" not in url
 
 
 def main():
