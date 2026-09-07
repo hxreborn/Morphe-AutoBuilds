@@ -274,6 +274,8 @@ def get_download_link(version: str, app_name: str, config: dict, arch: str = Non
     target_arch = arch if arch else config.get('arch', 'universal')
     
     criteria = [config['type'], target_arch, config['dpi']]
+    if config.get('version_code'):
+        criteria.append(str(config['version_code']))
     
     # --- UNIVERSAL URL FINDER WITH VALIDATION ---
     # Extract build number if present (e.g., "32.30.0(1575420)" -> version="32.30.0", build="1575420")
