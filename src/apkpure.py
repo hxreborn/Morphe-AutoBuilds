@@ -107,6 +107,8 @@ def get_download_link(version: str, app_name: str, config: dict) -> str:
     if version_code:
         kind = "XAPK" if config.get("prefer_xapk", False) else "APK"
         params = [f"versionCode={version_code}"]
+        if config.get("arch"):
+            params.append(f"nc={config['arch']}")
         if config.get("min_sdk"):
             params.append(f"sv={config['min_sdk']}")
         pinned_url = (
