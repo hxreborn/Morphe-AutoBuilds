@@ -1,0 +1,11 @@
+{
+    "org": "paget96",
+    "name": "internet-speed-speed-test-2",
+    "release_prefix": "network-guru-speed-indicator",
+    "type": "BUNDLE",
+    "arch": "arm64-v8a",
+    "dpi": "480-640",
+    "package": "com.paget96.netspeedindicator",
+    "version": "2.0",
+    "version_code": 158
+}
