@@ -191,24 +191,23 @@ def download_platform(
 
         platform_module = globals()[platform]
 
-        # Candidate versions (highest -> lowest) for universal robustness:
-        # - If config pins a version: only try that.
-        # - Else if override provided (retry path): try only that.
-        # - Else ask the patching CLI for compatible versions and try those.
-        # - If none returned: fall back to latest available from the store.
+        # Candidate versions, most wanted first: pin, bundle target, store latest
         pinned = (config.get("version") or "").strip()
         if override_version:
             candidates = [override_version]
-        elif pinned:
-            candidates = [pinned]
         else:
-            candidates = utils.get_supported_versions(config["package"], cli, patches)
-            try:
-                latest = platform_module.get_latest_version(app_name, config)
-                if latest and latest not in candidates:
-                    candidates.append(latest)
-            except Exception as e:
-                logging.debug(f"Could not get latest version for {app_name} on {platform}: {e}")
+            # sha256 pins name exact bytes
+            candidates = [pinned] if pinned else []
+            if not config.get("sha256"):
+                for supported in utils.get_supported_versions(config["package"], cli, patches):
+                    if supported not in candidates:
+                        candidates.append(supported)
+                try:
+                    latest = platform_module.get_latest_version(app_name, config)
+                    if latest and latest not in candidates:
+                        candidates.append(latest)
+                except Exception as e:
+                    logging.debug(f"Could not get latest version for {app_name} on {platform}: {e}")
 
         last_error: Exception | None = None
         for version in candidates:
