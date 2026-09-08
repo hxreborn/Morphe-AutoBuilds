@@ -160,6 +160,20 @@ def fetch_latest_app_version(app_name: str) -> str:
             logging.info(f"  latest-version probe failed for {app_name}/{platform}: {e}")
             resolved = ""
 
+        # APKCombo is a package-name based final provider, so it needs no
+        # per-app config file.  Use it only if the configured store was
+        # unreachable; this preserves primary-store version preference while
+        # avoiding a false "no update" result during Cloudflare outages.
+        if not resolved:
+            try:
+                fallback = importlib.import_module("src.apkcombo")
+                ver = fallback.get_latest_version(app_name, config)
+                if isinstance(ver, str) and ver.strip():
+                    resolved = ver.strip()
+                    logging.info(f"  latest-version fallback {app_name}/apkcombo: {resolved}")
+            except Exception as e:
+                logging.debug(f"  APKCombo latest-version fallback failed for {app_name}: {e}")
+
     _latest_app_version_cache[app_name] = resolved
     return resolved
 

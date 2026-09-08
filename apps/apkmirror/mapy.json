@@ -1,0 +1,9 @@
+{
+  "org": "mapy",
+  "name": "mapy",
+  "type": "APK",
+  "arch": "universal",
+  "dpi": "nodpi",
+  "package": "cz.seznam.mapy",
+  "version": ""
+}

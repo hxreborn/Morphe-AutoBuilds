@@ -1,0 +1,9 @@
+{
+  "org": "ticktick",
+  "name": "ticktick",
+  "type": "APK",
+  "arch": "universal",
+  "dpi": "nodpi",
+  "package": "com.ticktick.task",
+  "version": ""
+}

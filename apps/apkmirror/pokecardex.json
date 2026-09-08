@@ -1,0 +1,9 @@
+{
+  "org": "pokecardex",
+  "name": "pokecardex",
+  "type": "APK",
+  "arch": "universal",
+  "dpi": "nodpi",
+  "package": "com.pokecardex.mobile",
+  "version": ""
+}

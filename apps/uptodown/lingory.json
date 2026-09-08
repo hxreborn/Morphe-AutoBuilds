@@ -1,1 +1,5 @@
-{ "name": "lingory", "package": "org.languageapp.lingory", "version": "" }
+{
+  "name": "lingory",
+  "package": "org.languageapp.lingory",
+  "version": ""
+}

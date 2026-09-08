@@ -1,0 +1,9 @@
+{
+  "org": "park4night-com",
+  "name": "park4night-motorhome-camper",
+  "type": "BUNDLE",
+  "arch": "universal",
+  "dpi": "120-640dpi",
+  "package": "fr.tramb.park4night",
+  "version": ""
+}
