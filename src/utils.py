@@ -60,8 +60,10 @@ def find_file(files: list[Path], prefix: str = None, suffix: str = None, contain
         if prefix and not file.name.startswith(prefix):
             matches = False
             
-        if suffix and not file.name.endswith(suffix):
-            matches = False
+        if suffix:
+            suff_tuple = tuple(suffix) if isinstance(suffix, (list, tuple)) else suffix
+            if not file.name.endswith(suff_tuple):
+                matches = False
             
         if contains and contains.lower() not in file.name.lower():
             matches = False
@@ -480,7 +482,7 @@ def detect_github_release(user: str, repo: str, tag: str) -> dict:
     for attempt in range(max_retries):
         try:
             # Prefer 'gh' CLI as it handles tokens more robustly in Actions environment
-            if attempt < 2:
+            if attempt < 2 and shutil.which("gh"):
                 logging.info(f"Fetching release {tag} for {user}/{repo} (attempt {attempt + 1})...")
                 
                 if tag == "latest":
@@ -512,13 +514,12 @@ def detect_github_release(user: str, repo: str, tag: str) -> dict:
                     data = gh_api_request(f"repos/{user}/{repo}/releases/tags/{tag}")
                     return data
             else:
-                # Last ditch effort with PyGithub if gh CLI fails
+                # Fallback to PyGithub
                 logging.warning(f"Falling back to PyGithub for {user}/{repo}...")
                 repo_obj = gh.get_repo(f"{user}/{repo}")
                 if tag == "latest":
                     release = repo_obj.get_latest_release()
                     return release.raw_data
-                # ... other cases omitted for brevity as gh CLI is preferred ...
                 return repo_obj.get_release(tag).raw_data
                     
         except Exception as e:
@@ -552,3 +553,54 @@ def detect_source_type(cli_file: Path, patches_file: Path) -> str:
     elif cli_file and "revanced" in cli_file.name.lower() and patches_file and patches_file.suffix in [".jar", ".rvp"]:
         return "revanced"
     return "unknown"
+
+
+def strip_zip_entries(zip_path: Path, patterns: list[str]) -> None:
+    """Strip matching file patterns from a ZIP archive in a cross-platform way."""
+    if not zip_path or not zip_path.exists():
+        return
+
+    if shutil.which("zip"):
+        try:
+            run_process(["zip", "--delete", str(zip_path)] + patterns, silent=True, check=False)
+            return
+        except Exception:
+            pass
+
+    # Pure Python fallback using zipfile
+    temp_zip = zip_path.with_suffix(".tmp.zip")
+    try:
+        import fnmatch
+        modified = False
+        with zipfile.ZipFile(zip_path, 'r') as zin:
+            with zipfile.ZipFile(temp_zip, 'w', compression=zin.compression) as zout:
+                for item in zin.infolist():
+                    if any(fnmatch.fnmatch(item.filename, p) for p in patterns):
+                        modified = True
+                        continue
+                    zout.writestr(item, zin.read(item.filename))
+        if modified:
+            zip_path.unlink()
+            temp_zip.rename(zip_path)
+        else:
+            temp_zip.unlink(missing_ok=True)
+    except Exception as e:
+        logging.debug(f"Failed to strip zip entries: {e}")
+        if temp_zip.exists():
+            temp_zip.unlink(missing_ok=True)
+
+
+def check_apk_integrity(apk_path: Path) -> bool:
+    """Validate that APK is a valid uncorrupted zip archive."""
+    if not apk_path or not apk_path.exists() or apk_path.stat().st_size == 0:
+        return False
+    try:
+        if not zipfile.is_zipfile(apk_path):
+            return False
+        with zipfile.ZipFile(apk_path, 'r') as z:
+            bad_file = z.testzip()
+            if bad_file is not None:
+                return False
+        return True
+    except Exception:
+        return False

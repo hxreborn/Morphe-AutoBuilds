@@ -10,7 +10,8 @@ from src import (
     uptodown,
     aptoide,
     apkmirror,
-    github
+    github,
+    apkcombo,
 )
 
 def _sha256(path: Path) -> str:
@@ -144,11 +145,37 @@ def download_platform(
 ) -> tuple[Path | None, str | None, list[str]]:
     try:
         config_path = Path("apps") / platform / f"{app_name}.json"
-        if not config_path.exists():
-            raise FileNotFoundError(f"Config file not found: {config_path}")
+        config = None
+        if config_path.exists():
+            with config_path.open() as json_file:
+                config = json.load(json_file)
+        else:
+            # Fallback: search other platform config directories for this app
+            for other_platform in ["apkmirror", "uptodown", "apkpure", "aptoide", "github", "apkcombo"]:
+                if other_platform == platform:
+                    continue
+                other_path = Path("apps") / other_platform / f"{app_name}.json"
+                if other_path.exists():
+                    try:
+                        with other_path.open() as json_file:
+                            other_cfg = json.load(json_file)
+                        if other_cfg.get("package"):
+                            config = {
+                                "name": other_cfg.get("name", app_name),
+                                "package": other_cfg["package"],
+                                "version": other_cfg.get("version", ""),
+                                "arch": other_cfg.get("arch", "universal"),
+                                "type": other_cfg.get("type", "APK"),
+                                "dpi": other_cfg.get("dpi", "nodpi"),
+                                "org": other_cfg.get("org", app_name)
+                            }
+                            logging.info(f"Synthesized {platform} config for {app_name} from {other_platform}")
+                            break
+                    except Exception:
+                        continue
 
-        with config_path.open() as json_file:
-            config = json.load(json_file)
+        if not config or not config.get("package"):
+            raise FileNotFoundError(f"Config file not found for {app_name} on {platform}")
         
         # APKMirror's "universal" row can be the only variant containing arm64,
         # including for bundles. Keep that selector intact; bundle merging and
@@ -159,6 +186,8 @@ def download_platform(
         )
         if arch and not preserve_universal_apkmirror_variant:
             config['arch'] = arch
+        elif 'arch' not in config or not config['arch']:
+            config['arch'] = arch or "universal"
 
         platform_module = globals()[platform]
 
@@ -174,9 +203,12 @@ def download_platform(
             candidates = [pinned]
         else:
             candidates = utils.get_supported_versions(config["package"], cli, patches)
-            if not candidates:
+            try:
                 latest = platform_module.get_latest_version(app_name, config)
-                candidates = [latest] if latest else []
+                if latest and latest not in candidates:
+                    candidates.append(latest)
+            except Exception as e:
+                logging.debug(f"Could not get latest version for {app_name} on {platform}: {e}")
 
         last_error: Exception | None = None
         for version in candidates:
@@ -253,6 +285,15 @@ def download_uptodown(
     override_version: str = None,
 ) -> tuple[Path | None, str | None, list[str]]:
     return download_platform(app_name, "uptodown", cli, patches, arch, override_version)
+
+def download_apkcombo(
+    app_name: str,
+    cli: str,
+    patches: str,
+    arch: str = None,
+    override_version: str = None,
+) -> tuple[Path | None, str | None, list[str]]:
+    return download_platform(app_name, "apkcombo", cli, patches, arch, override_version)
 
 def download_apkeditor() -> Path:
     max_retries = 3

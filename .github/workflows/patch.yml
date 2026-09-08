@@ -138,6 +138,12 @@ jobs:
     name: Build Applications
     needs: patch-apps
     runs-on: ubuntu-latest
+    services:
+      trawl:
+        image: ghcr.io/germondai/trawl:latest
+        ports:
+          - 8191:8191
+        options: --shm-size=1gb
     permissions:
       contents: write
     strategy:
@@ -175,7 +181,9 @@ jobs:
         env:
           APP_NAME: ${{ matrix.app_name }}
           SOURCE: ${{ matrix.source }}
+          ARCH: ${{ matrix.arch }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TRAWL_URL: http://localhost:8191
         run: |
           echo "Building ${{ matrix.app_name }} with ${{ matrix.source }}..."
           sleep $((RANDOM % 30)).$((RANDOM % 100))
@@ -236,7 +244,6 @@ jobs:
         with:
           path: ./all-apks
           pattern: apk-*
-          if-no-files-found: warn
 
       - name: Download All Build Records
         uses: actions/download-artifact@v4

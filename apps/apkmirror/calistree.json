@@ -1,0 +1,9 @@
+{
+  "org": "calistree",
+  "name": "calistree-calisthenics-skills",
+  "type": "APK",
+  "arch": "universal",
+  "dpi": "nodpi",
+  "package": "com.calistree.calistree",
+  "version": ""
+}
