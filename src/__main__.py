@@ -14,6 +14,9 @@ from src import (
     downloader
 )
 
+UNAVAILABLE = object()
+
+
 def _should_retry_with_older_version(output: str | None) -> bool:
     """Detect common patterns that indicate the chosen app version is not
     actually compatible with the selected patches (fingerprint mismatch, etc.)."""
@@ -122,7 +125,7 @@ def run_build(app_name: str, source: str, arch: str = "universal") -> str | None
     if input_apk is None or not used_method or not version:
         logging.error(f"❌ Failed to download APK for {app_name}")
         logging.error("All download sources failed. Skipping this app.")
-        return None
+        return UNAVAILABLE
 
     # Try the downloaded version first, then (if available) older compatible
     # versions from the patch set. This prevents a single bad/overstated
@@ -426,9 +429,13 @@ def main():
         
         # Build for each architecture
         built_apks = []
+        unavailable = 0
         for arch in arches:
             logging.info(f"🔨 Building {app_name} for {arch} architecture...")
             apk_path = run_build(app_name, source, arch)
+            if apk_path is UNAVAILABLE:
+                unavailable += 1
+                continue
             if apk_path:
                 built_apks.append(apk_path)
                 print(f"✅ Built {arch} version: {Path(apk_path).name}")
@@ -438,13 +445,17 @@ def main():
         for apk in built_apks:
             print(f"  📱 {Path(apk).name}")
         if not built_apks:
-            raise SystemExit(1)
+            if not unavailable:
+                raise SystemExit(1)
+            print(f"⏭️  No store served {app_name}; keeping the released APK")
         
     else:
         # Fallback to single universal build
         logging.warning("arch-config.json not found, building universal only")
         apk_path = run_build(app_name, source, "universal")
-        if apk_path:
+        if apk_path is UNAVAILABLE:
+            print(f"⏭️  No store served {app_name}; keeping the released APK")
+        elif apk_path:
             print(f"🎯 Final APK path: {apk_path}")
         else:
             raise SystemExit(1)
